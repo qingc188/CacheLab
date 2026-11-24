@@ -49,7 +49,7 @@ static void usage(const char *prog)
 }
 
 /*
- * TODO: Simulate one data access at addr.
+ * Simulate one data access at addr.
  * Extract the set index and tag, then update the cache state and counters
  * for a hit, a miss, or a miss with an LRU eviction. An eviction also counts
  * as a miss. Handle s == 0 and s + b == 64 without shifting by 64 bits.
@@ -58,8 +58,40 @@ static void usage(const char *prog)
  */
 static void access_cache(uint64_t addr)
 {
-    (void)addr;
-    (void)tick;
+    uint64_t block = b == 64 ? 0 : addr >> b;
+    uint64_t index = block & ((UINT64_C(1) << s) - 1);
+    uint64_t tag = block >> s;
+    line_t *set = cache + (size_t)index * E;
+    line_t *empty = NULL;
+    line_t *oldest = NULL;
+
+    ++tick;
+    for (int i = 0; i < E; ++i) {
+        line_t *line = &set[i];
+        if (!line->valid) {
+            if (empty == NULL)
+                empty = line;
+        } else if (line->tag == tag) {
+            ++hits;
+            line->last_used = tick;
+            if (verbose)
+                printf(" hit");
+            return;
+        } else if (oldest == NULL || line->last_used < oldest->last_used) {
+            oldest = line;
+        }
+    }
+
+    ++misses;
+    if (empty == NULL) {
+        ++evictions;
+        empty = oldest;
+        if (verbose)
+            printf(" miss eviction");
+    } else if (verbose) {
+        printf(" miss");
+    }
+    *empty = (line_t){1, tag, tick};
 }
 
 /* replay - run every data access in the trace through the cache */

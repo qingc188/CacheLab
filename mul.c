@@ -22,6 +22,29 @@ int is_mul(int M, int N, int A[N][M], int B[M][N], int C[N][N]);
 char mul_submit_desc[] = "Multiply submission";
 void mul_submit(int M, int N, int A[N][M], int B[M][N], int C[N][N])
 {
+    /* One strip of B contributes to as many as three rows of C. */
+    for (int i = 0; i < N; i += 3) {
+        for (int j = 0; j < N; j += 4) {
+            int sum[3][4] = {{0}};
+
+            for (int k = 0; k < M; ++k) {
+                int a0 = A[i][k];
+                int a1 = i + 1 < N ? A[i + 1][k] : 0;
+                int a2 = i + 2 < N ? A[i + 2][k] : 0;
+
+                for (int c = 0; c < 4 && j + c < N; ++c) {
+                    int value = B[k][j + c];
+                    sum[0][c] += a0 * value;
+                    sum[1][c] += a1 * value;
+                    sum[2][c] += a2 * value;
+                }
+            }
+
+            for (int r = 0; r < 3 && i + r < N; ++r)
+                for (int c = 0; c < 4 && j + c < N; ++c)
+                    C[i + r][j + c] = sum[r][c];
+        }
+    }
 }
 
 /*
